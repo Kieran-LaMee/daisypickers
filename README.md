@@ -1,76 +1,45 @@
 # Daisy Pickers
 
-The website for the Daisy Pickers softball team, to be served at daisypickers.com. One static page: a field of hand-drawn daisies that react to the cursor, a Seasons view with every roster, and a Contact view.
+Website for the Daisy Pickers softball team, live at https://daisypickers.com. One static page: a field of hand-drawn daisies, a Seasons view with every roster, and a Contact view.
 
-## What's here
+## Files
 
-| Path | What it is |
-|---|---|
-| `index.html` | The built page. This is what gets deployed. Do not edit it by hand. |
-| `CNAME` | Tells GitHub Pages the site lives at daisypickers.com. |
-| `.nojekyll` | Stops GitHub Pages running Jekyll over the files. |
-| `build.py` | Builds `index.html` from `src/`. Python standard library only. |
-| `src/template.html` | The source: all the markup, styles, script and season data. Edit this. |
-| `src/shapes.json` | The three daisy shapes (the pair and two singles) as SVG path data, plus their centres. |
-| `src/fonts/` | Barlow Semi Condensed, Geist and Geist Mono (all SIL Open Font License). Inlined at build time. |
-| `assets/logos/` | The traced daisies as SVG files in black, navy and white. One is used as the favicon. |
-| `design-system/` | A copy of the brand book, tokens and logo notes. See "Out of date" below. |
-| `reference/shirt.jpg` | The team shirt photo the daisies and lettering were traced and matched from. |
+- `src/template.html`: all markup, styles, script and the `SEASONS` data. Edit this.
+- `build.py`: inlines fonts and shapes into `index.html` (Python standard library only). Never edit `index.html` by hand.
+- `src/shapes.json`, `src/fonts/`, `assets/logos/`: traced daisies, fonts (SIL OFL), logo SVGs.
+- `design-system/`: brand book and tokens. Partly out of date (see below).
+- `reference/shirt.jpg`: the shirt photo the daisies and lettering were traced from.
 
-## Build and preview
+## Build and publish
 
 ```
-python3 build.py
-open index.html
+python3 build.py      # writes index.html; open it to preview, add #controls for the tuning panel
+git commit -am "..." && git push   # GitHub Pages redeploys in about a minute
 ```
 
-Add `#controls` to the address (`index.html#controls`) to show the tuning panel for the daisy field. It is hidden otherwise.
+- **Hosting:** GitHub Pages from `main`, root folder. `CNAME` and `.nojekyll` are for Pages.
+- **DNS:** Cloudflare, A/AAAA records to GitHub Pages and `www` CNAME to `kieran-lamee.github.io`. Keep them DNS only (grey cloud) so GitHub can renew its certificate.
+- **Email:** Cloudflare Email Routing forwards info@daisypickers.com to daisypickersnyc@gmail.com, which forwards a copy to Zackary. Receive only.
+- **Shop:** GitHub Pages doesn't allow one. For merch, link to a hosted checkout or move to Cloudflare Pages.
 
-`python3 build.py --artifact` also writes `dist/prototype.html`, the controls-on version used for the claude.ai prototype.
+## Decisions
 
-## Deploy: GitHub Pages with a Cloudflare domain
+- **Look:** white, black type, navy daisies, one yellow accent, lots of space. "Stylish, not cute."
+- **Home:** the name opens large and centred, then settles top-left. Click a daisy to pick it into a bouquet with a "Picked N" count. A faint infield (foul lines, base paths, arc, pitcher's circle) sits bottom-right.
+- **Seasons:** list and detail, arrow keys move through them. The fun record is games played to nil. Seasons with an unknown record omit it.
+- **Players:** first names only. Mimi and Zackary shown as co-captains wherever either captained.
+- **Rejected:** grass texture, tagline, dots between daisies, photo behind the seasons list.
 
-Live at https://daisypickers.com since 3 October 2026, served by GitHub Pages from `main`, folder `/ (root)`, of https://github.com/Kieran-LaMee/daisypickers.
+## To do
 
-To publish a change: edit `src/template.html`, run `python3 build.py`, commit and push. GitHub redeploys within a minute or so.
-
-- **DNS (Cloudflare):** four `A` and four `AAAA` records for `@` pointing at GitHub Pages, and a `CNAME` for `www` pointing to `kieran-lamee.github.io`. All are "DNS only" (grey cloud). Leave them that way: Cloudflare's proxy can stop GitHub renewing its certificate.
-- **HTTPS:** GitHub's certificate covers both names and renews itself. "Enforce HTTPS" is on, and `www` and `http://` redirect to https://daisypickers.com.
-
-One caveat for later: GitHub Pages' terms do not allow running an online shop from it. If merch goes ahead, either link out to a hosted checkout or move hosting to Cloudflare Pages, which can deploy from this same repository.
-
-## Decisions so far
-
-- **Look:** white page, black type, navy daisies, one yellow accent. Minimal, lots of empty space. "Stylish, not cute."
-- **Daisies:** traced from a photo of the team shirt. The pair is the logo. The two singles were cut from it, each given its own normal-length petal where the two overlap on the shirt.
-- **Field defaults:** spin movement, a mix of singles and pairs, about 123 daisies on a 1470 x 920 window, size 115%, navy, drift on, dots off.
-- **Home page extras:** click a daisy to pick it; it flies to a small bouquet under the name (most recent 14) with a "Picked N" count that flashes yellow. Daisies near the cursor get yellow centres. A softball infield in very light navy lines (foul lines, base paths, infield arc and pitcher's circle; no bases, plates or batter's boxes) sits in the bottom-right corner; daisies only grow in the outfield.
-- **Opening:** the name appears large and centred, then shrinks to the top-left as the field fades in. It is set at its large size and scaled down, not scaled up from 16px, so it stays sharp.
-- **Seasons:** list on the left, selected season on the right, arrow keys move through them. Each shows a win record and a fun record; the fun record is always games played to nil.
-- **Players:** first names only. Mimi and Zackary are shown as co-captains in every season where either was a captain.
-- **Contact:** info@daisypickers.com, no Instagram for now.
-- **Rejected:** a grass texture background (tried three ways), a tagline, dots between the daisies, a photo behind the seasons list.
-
-## Still to do
-
-- **Email:** info@daisypickers.com does not exist yet but is already shown on the live Contact page. Plan: Cloudflare Email Routing forwarding to the captain's address. Waiting on the captain's email address.
-- **Spring 2026 and Fall 2025:** played in Central Park with PS Social Softball. Rosters added from a handwritten list (Fall 2025) and a batting-order note (Spring 2026). Played on Saturdays. Win records, finishes and start dates are unknown and left out; the fun record is set to 6–0 for both. Mimi and Zackary are shown as co-captains, which is assumed.
-- **Spring 2025 roster:** one name was hidden in the source screenshot with only "Ph" visible. It is entered as Phil, which is a guess.
-- **Rosters may be incomplete:** the screenshots for Summer 2023, Fall 2023, Spring 2024 and Spring 2025 ended at the bottom of the screen, so later names could be missing.
-- **League size:** Summer 2023 ("10th") and Spring 2025 ("12th") have no "of how many" because the standings were cut off.
-- **Fall 2026:** marked in progress at 0-4. Update the record when the season ends.
-- **Logo artwork:** the daisies are traced from a small photo. Replace `src/shapes.json` and `assets/logos/` when the original file is available.
-- **Shirt typeface:** Barlow Semi Condensed is the closest free match found, not a confirmed identification.
-- **Season pages, photos, merch:** not started.
-- **Phones:** the infield takes roughly the bottom 40% of a phone screen. Checked in the iPhone 14 Pro Simulator; still worth a proper look on a real phone.
+- Fall 2026: update the record (0–4 so far) when the season ends.
+- Records for Fall 2025 and Spring 2026 (PS Social) are unknown; fun record set to 6–0.
+- Spring 2025 "Phil" is a guess from a cut-off name. Rosters for Summer 2023 to Spring 2025 may be incomplete. Summer 2023 and Spring 2025 finishes lack league size.
+- Replace traced logo with original artwork when available. Shirt typeface is a near match, not confirmed.
+- Not started: season pages, photos, merch.
 
 ## Out of date
 
-`design-system/brand-book.md` predates the last round of changes. It still says never to colour the daisy centres, describes a hover photo behind the seasons list, and does not mention picking, the bouquet, the diamond or the list-and-detail Seasons layout. Where it disagrees with `src/template.html`, the template is right.
+`design-system/brand-book.md` predates picking, the bouquet, the diamond, yellow centres and the Seasons layout. Where it disagrees with `src/template.html`, the template wins.
 
-## Where the prototype lives
-
-- Prototype with controls: https://claude.ai/artifact/XybtE5vozr5buH3Zdx6Jkj
-- Design system: https://claude.ai/artifact/JooXf3C2dybPuWdciwTBHu
-
-Both are private to Kieran's Claude account.
+Prototype and design system on claude.ai (private): [prototype](https://claude.ai/artifact/XybtE5vozr5buH3Zdx6Jkj), [design system](https://claude.ai/artifact/JooXf3C2dybPuWdciwTBHu).
