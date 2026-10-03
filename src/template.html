@@ -571,8 +571,12 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
     { name: 'Fall 2026', team: 'The Daisy Pickers', w: 0, l: 4, t: 0, finish: '6th of 6', live: true,
       played: 'Fridays, Gansevoort Peninsula, West Village', began: 'September 11, 2026', league: 'Volo',
       roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Grace', 'Alexander', 'Raag', 'Kyle', 'Ryan', 'Zane', 'Ethan', 'Mary', 'Ciara', 'Kieran', 'Ellie', 'Eric', 'Peter'] },
-    { name: 'Spring 2026', tbc: true },
-    { name: 'Fall 2025', tbc: true },
+    { name: 'Spring 2026', team: 'Daisy Pickers', funRecord: '6–0',
+      played: 'Saturdays, Central Park', league: 'PS Social Softball',
+      roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Ryan', 'Zane', 'Patrick', 'Kyle', 'Mary', 'Alex H', 'Anton', 'Ethan', 'Alex W', 'Grace', 'Nathan', 'Ciara', 'Kieran'] },
+    { name: 'Fall 2025', team: 'Daisy Pickers', funRecord: '6–0',
+      played: 'Saturdays, Central Park', league: 'PS Social Softball',
+      roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Zane', 'Kyle', 'Patrick', 'Ryan', 'Alex W', 'Anton', 'Alex H', 'Kieran', 'Grace', 'Ciara', 'Mary', 'Raag', 'Ethan'] },
     { name: 'Spring 2025', team: 'Daisy Pickers', w: 3, l: 4, t: 0, finish: '12th',
       played: 'Saturdays, Central Park', began: 'April 12, 2025', league: 'Volo',
       roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Alexander', 'Willa', 'Samya', 'Dylan', 'Kareem', 'Max', 'Phil', 'Mary', 'Ciara', 'Ryan', 'Raag', 'Zane', 'Patrick', 'Kieran', 'Elizabeth', 'Anton'] },
@@ -598,9 +602,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
     var facts = document.getElementById('s-facts'); facts.textContent = '';
     document.getElementById('s-tbc').hidden = !s.tbc; facts.hidden = !!s.tbc; document.getElementById('s-roster').hidden = !!s.tbc;
     if (s.tbc) { if (focus) seasonBtns[i].focus(); return; }
-    var rows = [['Win record', record(s) + (s.live ? ' so far' : '')], ['Fun record', fun(s) + (s.live ? ' so far' : '')], ['Finish', s.finish + (s.live ? ' so far' : '')], ['Played', s.played], ['Began', s.began], ['League', s.league]];
+    var so = s.live ? ' so far' : '', known = s.w != null;              // seasons without a known record leave out win record and finish
+    var rows = [['Win record', known && record(s) + so], ['Fun record', (s.funRecord || fun(s)) + so], ['Finish', s.finish && s.finish + so], ['Played', s.played], ['Began', s.began], ['League', s.league]];
     if (s.as) rows.push(['Team name', s.as]);
-    rows.forEach(function (r) { facts.appendChild(el('dt', '', r[0])); facts.appendChild(el('dd', '', r[1])); });
+    rows.forEach(function (r) { if (!r[1]) return; facts.appendChild(el('dt', '', r[0])); facts.appendChild(el('dd', '', r[1])); });
     var names = document.getElementById('s-names'); names.textContent = '';
     s.roster.forEach(function (r) {
       var li = el('li', '', Array.isArray(r) ? r[0] : r);

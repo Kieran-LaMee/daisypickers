@@ -30,17 +30,12 @@ Add `#controls` to the address (`index.html#controls`) to show the tuning panel 
 
 ## Deploy: GitHub Pages with a Cloudflare domain
 
-1. Create a public repository (for example `daisypickers`) and push this folder to `main`.
-2. In the repository: Settings, Pages. Set the source to "Deploy from a branch", branch `main`, folder `/ (root)`.
-3. Still under Pages, set the custom domain to `daisypickers.com`. The `CNAME` file here already says the same.
-4. In Cloudflare, DNS for daisypickers.com, add:
-   - four `A` records for `@`: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
-   - optionally four `AAAA` records for `@`: `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153`
-   - one `CNAME` record for `www` pointing to `kieran-lamee.github.io`
-5. Set those records to "DNS only" (grey cloud) to begin with, so GitHub can issue its own certificate.
-6. Back in Pages settings, tick "Enforce HTTPS" once it becomes available. GitHub says this and DNS changes can each take up to 24 hours.
+Live at https://daisypickers.com since 3 October 2026, served by GitHub Pages from `main`, folder `/ (root)`, of https://github.com/Kieran-LaMee/daisypickers.
 
-The record values come from GitHub's custom domain documentation, checked on 3 October 2026.
+To publish a change: edit `src/template.html`, run `python3 build.py`, commit and push. GitHub redeploys within a minute or so.
+
+- **DNS (Cloudflare):** four `A` and four `AAAA` records for `@` pointing at GitHub Pages, and a `CNAME` for `www` pointing to `kieran-lamee.github.io`. All are "DNS only" (grey cloud). Leave them that way: Cloudflare's proxy can stop GitHub renewing its certificate.
+- **HTTPS:** GitHub's certificate covers both names and renews itself. "Enforce HTTPS" is on, and `www` and `http://` redirect to https://daisypickers.com.
 
 One caveat for later: GitHub Pages' terms do not allow running an online shop from it. If merch goes ahead, either link out to a hosted checkout or move hosting to Cloudflare Pages, which can deploy from this same repository.
 
@@ -49,8 +44,8 @@ One caveat for later: GitHub Pages' terms do not allow running an online shop fr
 - **Look:** white page, black type, navy daisies, one yellow accent. Minimal, lots of empty space. "Stylish, not cute."
 - **Daisies:** traced from a photo of the team shirt. The pair is the logo. The two singles were cut from it, each given its own normal-length petal where the two overlap on the shirt.
 - **Field defaults:** spin movement, a mix of singles and pairs, about 123 daisies on a 1470 x 920 window, size 115%, navy, drift on, dots off.
-- **Home page extras:** click a daisy to pick it; it flies to a small bouquet under the name (most recent 14) with a "Picked N" count that flashes yellow. Daisies near the cursor get yellow centres. A softball infield in very light navy lines sits in the bottom-right corner; daisies only grow in the outfield.
-- **Opening:** the name appears large and centred, then shrinks to the top-left as the field fades in.
+- **Home page extras:** click a daisy to pick it; it flies to a small bouquet under the name (most recent 14) with a "Picked N" count that flashes yellow. Daisies near the cursor get yellow centres. A softball infield in very light navy lines (foul lines, base paths, infield arc and pitcher's circle; no bases, plates or batter's boxes) sits in the bottom-right corner; daisies only grow in the outfield.
+- **Opening:** the name appears large and centred, then shrinks to the top-left as the field fades in. It is set at its large size and scaled down, not scaled up from 16px, so it stays sharp.
 - **Seasons:** list on the left, selected season on the right, arrow keys move through them. Each shows a win record and a fun record; the fun record is always games played to nil.
 - **Players:** first names only. Mimi and Zackary are shown as co-captains in every season where either was a captain.
 - **Contact:** info@daisypickers.com, no Instagram for now.
@@ -58,8 +53,8 @@ One caveat for later: GitHub Pages' terms do not allow running an online shop fr
 
 ## Still to do
 
-- **Email:** info@daisypickers.com does not exist yet. It needs setting up before launch, for example with Cloudflare's email forwarding.
-- **Spring 2026 and Fall 2025:** placeholders marked "[Details to come]". These were played in a different league; the details are still to be collected.
+- **Email:** info@daisypickers.com does not exist yet but is already shown on the live Contact page. Plan: Cloudflare Email Routing forwarding to the captain's address. Waiting on the captain's email address.
+- **Spring 2026 and Fall 2025:** played in Central Park with PS Social Softball. Rosters added from a handwritten list (Fall 2025) and a batting-order note (Spring 2026). Played on Saturdays. Win records, finishes and start dates are unknown and left out; the fun record is set to 6–0 for both. Mimi and Zackary are shown as co-captains, which is assumed.
 - **Spring 2025 roster:** one name was hidden in the source screenshot with only "Ph" visible. It is entered as Phil, which is a guess.
 - **Rosters may be incomplete:** the screenshots for Summer 2023, Fall 2023, Spring 2024 and Spring 2025 ended at the bottom of the screen, so later names could be missing.
 - **League size:** Summer 2023 ("10th") and Spring 2025 ("12th") have no "of how many" because the standings were cut off.
@@ -67,7 +62,7 @@ One caveat for later: GitHub Pages' terms do not allow running an online shop fr
 - **Logo artwork:** the daisies are traced from a small photo. Replace `src/shapes.json` and `assets/logos/` when the original file is available.
 - **Shirt typeface:** Barlow Semi Condensed is the closest free match found, not a confirmed identification.
 - **Season pages, photos, merch:** not started.
-- **Phones:** the infield takes roughly the bottom 40% of a phone screen. It has been viewed in still screenshots only, not on a real device.
+- **Phones:** the infield takes roughly the bottom 40% of a phone screen. Checked in the iPhone 14 Pro Simulator; still worth a proper look on a real phone.
 
 ## Out of date
 
