@@ -1,0 +1,675 @@
+<title>Daisy Pickers Hero</title>
+<style>
+/*FONTS*/
+/* Layout: one full-window canvas of daisies; the name opens centred, then settles top-left; a menu top-right opens a centred list in a clearing. Prototype controls sit in a small panel bottom-right. */
+:root {
+  --paper: #ffffff;
+  --chalk: #f2f2f0;
+  --line: #dcdcd8;
+  --ink: #111111;
+  --ink-soft: #5e5e5e;
+  --navy: #1c2452;
+  --daisy: #ffe600;
+  --font-display: "Barlow Semi Condensed", "Arial Narrow", sans-serif;
+  --font-sans: "Geist", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --space-1: 8px; --space-2: 16px; --space-3: 32px; --space-4: 64px;
+  --inset-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; border-radius: 0; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+
+/* the diamond: a softball infield in thin lines, behind the daisies */
+#diamond { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
+#field { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+/* the name: one element, large and centred during the intro, small in the corner after */
+.wm {
+  position: fixed; left: var(--space-2); top: var(--inset-top); z-index: 3;
+  font: 700 16px/1 var(--font-display); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+  transform-origin: 0 0; transform: none;
+  transition: transform .95s cubic-bezier(.72,0,.18,1);
+}
+.wm span { display: block; margin-right: -.1em; }
+/* during the intro the name is set at its large size, not scaled up from 16px, so it stays sharp;
+   it shrinks to the corner by scaling down, then swaps back to real 16px type once it lands */
+body.intro .wm, body.settling .wm { font-size: calc(16px * var(--wm-s, 1)); }
+body.intro .wm { transform: translate(var(--wm-x, 0px), var(--wm-y, 0px)) scale(1); }
+body.settling .wm { transform: translate(0px, 0px) scale(var(--wm-k, 1)); }
+body.no-anim .wm { transition: none; }
+
+.nav {
+  position: fixed; right: var(--space-2); top: var(--inset-top); z-index: 3;
+  display: flex; gap: var(--space-2);
+  transition: opacity .6s ease .5s;
+}
+body.intro .nav, body.intro .panel { opacity: 0; pointer-events: none; }
+.nav button { font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; padding-block: 0; border-bottom: 1px solid transparent; }
+@media (hover: hover) { .season-list button.item:hover .nm { background: var(--daisy); } .nav button:hover, .seg button:not([aria-pressed="true"]):hover, .plain:hover { background: var(--daisy); } }
+.nav button[aria-expanded="true"] { border-bottom-color: var(--ink); }
+
+/* the sheets: a centred list in the clearing */
+.sheet {
+  position: fixed; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2);
+  padding-inline: var(--space-2); padding-block: var(--space-4);
+  text-align: center; pointer-events: none;
+  animation: rise .5s ease both;
+}
+.sheet > * { pointer-events: auto; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sheet ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); position: relative; z-index: 1; }
+.sheet .item { font: 500 clamp(24px, 6vw, 32px)/1.375 var(--font-sans); letter-spacing: -.01em; padding-inline: 4px; border-bottom: 1px solid transparent; user-select: text; }
+.sheet button.item:focus-visible { background: var(--daisy); }
+.sheet button.item[aria-current="true"] { background: var(--daisy); border-bottom-color: var(--ink); }
+.cap { font: 400 11px/16px var(--font-mono); letter-spacing: .02em; color: var(--ink-soft); margin: 0; }
+.sheet .entry { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.note { font: 400 13px/20px var(--font-sans); color: var(--ink-soft); margin: var(--space-2) 0 0; max-width: 34ch; position: relative; z-index: 1; }
+/* seasons: every season down the left, the selected one on the right. No daisies behind it. */
+.sheet.seasons { display: block; text-align: left; pointer-events: auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-block: calc(96px + env(safe-area-inset-top, 0px)) 120px; padding-inline: var(--space-3); }
+.seasons-grid { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--space-4); max-width: 1040px; margin: 0 auto; align-items: start; }
+.season-list button.item { display: block; text-align: left; padding: 0; border: 0; background: none; }
+.season-list .nm { display: inline; padding-inline: 4px; margin-left: -4px; border-bottom: 1px solid transparent; }
+.season-list button.item[aria-current="true"] { background: none; }
+.season-list button.item[aria-current="true"] .nm { background: var(--daisy); border-bottom-color: var(--ink); }
+.season-list button.item:focus-visible { background: none; }
+.detail { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.detail h2 { margin: 0; font: 700 clamp(30px, 7vw, 40px)/1.05 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.tbc { margin: 0; }
+.tbc span { background: var(--daisy); color: var(--ink); padding: 3px 6px; font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; }
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px var(--space-3); margin: 0; }
+.facts dt { font: 400 11px/24px var(--font-mono); letter-spacing: .02em; color: var(--ink-soft); }
+.facts dd { margin: 0; font: 400 16px/24px var(--font-sans); }
+.roster-head { display: flex; gap: var(--space-1); align-items: baseline; font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; padding-bottom: var(--space-1); border-bottom: 1px solid var(--line); }
+.names { list-style: none; margin: 0; padding: 0; columns: 3 150px; column-gap: var(--space-3); font: 400 20px/34px var(--font-sans); }
+.names li { break-inside: avoid; }
+.names .cap { display: inline; margin-left: 8px; }
+@media (max-width: 720px) {
+  .sheet.seasons { padding-inline: var(--space-2); }
+  .seasons-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .sheet .season-list { flex-direction: row; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+  .season-list button.item { font-size: 20px; }
+  .names { columns: 2 120px; font-size: 18px; line-height: 32px; }
+}
+
+/* the count of picked daisies, under the bouquet below the name */
+@keyframes flash { 0%, 35% { background: var(--daisy); color: var(--ink); } 100% { background: transparent; } }
+.picked { position: fixed; left: var(--space-2); top: 160px; z-index: 3; padding: 2px 4px; margin-left: -4px; }
+.picked.flash { animation: flash 1.1s ease-out; }
+
+/* prototype controls: tooling, not part of the site */
+.panel {
+  position: fixed; left: var(--space-2); bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px)); z-index: 4;
+  width: min(264px, calc(100vw - 32px)); box-sizing: border-box;
+  background: var(--paper); border: 1px solid var(--ink);
+  font: 400 13px/20px var(--font-sans);
+  transition: opacity .6s ease .7s;
+}
+.panel.closed { width: auto; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 12px; box-sizing: border-box; font: 500 12px/16px var(--font-sans); letter-spacing: .08em; text-transform: uppercase; gap: var(--space-2); }
+.panel-head .cap { text-transform: none; }
+.panel-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 12px 12px; max-height: calc(100vh - 150px); overflow-y: auto; }
+.row { display: flex; flex-direction: column; gap: 6px; }
+.row > label, .row > .lbl { display: flex; justify-content: space-between; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.seg { display: flex; border: 1px solid var(--ink); }
+.seg button { flex: 1; padding: 7px 4px; font: 500 12px/16px var(--font-sans); min-width: 0; }
+.seg button + button { border-left: 1px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
+.checks { display: flex; gap: var(--space-1) var(--space-2); flex-wrap: wrap; }
+.checks label { display: flex; gap: 6px; align-items: center; }
+.checks input { accent-color: var(--ink); margin: 0; }
+.plain { border: 1px solid var(--ink); padding: 7px 8px; font: 500 12px/16px var(--font-sans); }
+</style>
+
+<canvas id="diamond" aria-hidden="true"></canvas>
+<canvas id="field" aria-hidden="true"></canvas>
+
+<button class="wm" id="home" aria-label="Daisy Pickers, home"><span>Daisy Pickers</span></button>
+
+<p class="cap picked" id="picked" aria-live="polite" hidden></p>
+
+<nav class="nav" aria-label="Site">
+  <button id="nav-seasons" data-sheet="seasons" aria-expanded="false" aria-controls="sheet-seasons">Seasons</button>
+  <button id="nav-contact" data-sheet="contact" aria-expanded="false" aria-controls="sheet-contact">Contact</button>
+</nav>
+
+<section class="sheet seasons" id="sheet-seasons" aria-label="Seasons" hidden>
+  <div class="seasons-grid">
+    <div>
+      <ul class="season-list" id="season-list" aria-label="Seasons"></ul>
+    </div>
+    <article class="detail" aria-live="polite">
+      <h2 id="s-name"></h2>
+      <p class="tbc" id="s-tbc" hidden><span>[Details to come]</span></p>
+      <dl class="facts" id="s-facts"></dl>
+      <div id="s-roster">
+        <div class="roster-head"><span>Roster</span><span class="cap" id="s-count"></span></div>
+        <ol class="names" id="s-names"></ol>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="sheet" id="sheet-contact" aria-label="Contact" hidden>
+  <ul>
+    <li class="entry"><span class="item">info@daisypickers.com</span><p class="cap">Email</p></li>
+  </ul>
+</section>
+
+<aside class="panel" id="panel" aria-label="Prototype controls">
+  <button class="panel-head" id="panel-toggle" aria-expanded="true" aria-controls="panel-body"><span>Controls</span><span class="cap" id="panel-hint">Hide</span></button>
+  <div class="panel-body" id="panel-body">
+    <div class="row">
+      <span class="lbl"><span>Movement</span></span>
+      <div class="seg" role="group" aria-label="Movement">
+        <button id="mode-part" data-mode="part" aria-pressed="false">Part</button>
+        <button id="mode-spin" data-mode="spin" aria-pressed="true">Spin</button>
+        <button id="mode-scatter" data-mode="scatter" aria-pressed="false">Scatter</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="lbl"><span>Daisies</span></span>
+      <div class="seg" role="group" aria-label="Daisies">
+        <button id="shape-mix" data-shape="mix" aria-pressed="true">Mix</button>
+        <button id="shape-single" data-shape="single" aria-pressed="false">Singles</button>
+        <button id="shape-double" data-shape="double" aria-pressed="false">Doubles</button>
+      </div>
+    </div>
+    <div class="row"><label for="density"><span>How many</span><span id="density-out"></span></label><input type="range" id="density" min="0.3" max="2.6" step="0.05" value="1.5"></div>
+    <div class="row"><label for="size"><span>Size</span><span id="size-out"></span></label><input type="range" id="size" min="0.6" max="2" step="0.05" value="1.15"></div>
+    <div class="row"><label for="reach"><span>Reach of the cursor</span><span id="reach-out"></span></label><input type="range" id="reach" min="60" max="320" step="10" value="140"></div>
+    <div class="row">
+      <span class="lbl"><span>Colour</span></span>
+      <div class="seg" role="group" aria-label="Colour">
+        <button id="col-navy" data-col="navy" aria-pressed="true">Navy</button>
+        <button id="col-ink" data-col="ink" aria-pressed="false">Black</button>
+      </div>
+    </div>
+    <div class="checks">
+      <label for="drift"><input type="checkbox" id="drift" checked> Drift</label>
+      <label for="dots"><input type="checkbox" id="dots"> Dots</label>
+      <label for="glow"><input type="checkbox" id="glow" checked> Yellow centres</label>
+      <label for="lines"><input type="checkbox" id="lines" checked> Diamond</label>
+      <label for="pick"><input type="checkbox" id="pick" checked> Picking</label>
+    </div>
+    <button class="plain" id="replay">Replay the opening</button>
+  </div>
+</aside>
+
+<script>
+(function () {
+  'use strict';
+  var CONTROLS = /*CONTROLS*/;   // the tuning panel: always on in the prototype, only with #controls on the site
+  var SHAPES = /*SHAPES*/;   // 0 = the pair from the shirt, 1 and 2 = its two daisies on their own
+  var COLORS = { navy: '#1c2452', ink: '#111111' };
+  var BASE_SIZES = [40, 56, 80], SIZE_WEIGHTS = [0.5, 0.33, 0.17];
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var canvas = document.getElementById('field');
+  var ctx = canvas.getContext('2d');
+  var diamond = document.getElementById('diamond'), diamondOn = false;
+  var pickedEl = document.getElementById('picked'), picked = 0, held = [];   // held = the bouquet, oldest first
+  var bq = { x: 56, y: 96, on: 0, max: 14, scale: 0.55 };
+  var body = document.body;
+  var wm = document.getElementById('home');
+  var W = 0, H = 0, dpr = 1;
+  var paths = SHAPES.map(function (s) { return new Path2D(s.d); });
+  var centres = SHAPES.map(function (s) { return new Path2D(s.c); });
+  var YELLOW = '#ffe600';
+
+  var S = { mode: 'spin', shapes: 'mix', density: 1.5, size: 1.15, reach: 140, color: 'navy', drift: true, dots: false, glow: true, lines: true, pick: true };
+  var MODES = {
+    part:    { k: 38, c: 11,  push: 7000, rk: 14, rc: 7 },
+    spin:    { k: 38, c: 11,  push: 1600, rk: 0,  rc: 1.1 },
+    scatter: { k: 5,  c: 2.2, push: 900,  rk: 6,  rc: 3 }
+  };
+
+  var marks = [], dotsArr = [], sprites = [];
+  var cursor = { x: -9999, y: -9999, vx: 0, vy: 0, active: false, t: 0 };
+  var clearAll = false, clearing = 0, clearingTarget = 0;   // 0 = full field, 1 = a clearing for the open sheet
+  var fieldStart = Infinity;              // when the field began to fade in
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+  function pickSize() {
+    var r = Math.random(), acc = 0;
+    for (var i = 0; i < 3; i++) { acc += SIZE_WEIGHTS[i]; if (r < acc) return i; }
+    return 0;
+  }
+  function pickShape() {
+    if (S.shapes === 'double') return 0;
+    var r = Math.random();
+    if (S.shapes === 'single') return r < 0.5 ? 1 : 2;
+    return r < 0.3 ? 0 : (r < 0.65 ? 1 : 2);
+  }
+  function phoneScale() { return W < 600 ? 0.8 : 1; }
+  function HY(v) { return 56 + v * (H - 56); }
+
+  function buildSprites() {
+    sprites = SHAPES.map(function (sh, si) {
+      return BASE_SIZES.map(function (s) {
+        var w = s * S.size * phoneScale() * sh.w / 400;   // singles keep the scale they have inside the pair
+        var pw = Math.max(8, Math.ceil(w * dpr * 1.5));
+        var ph = Math.ceil(pw * sh.h / sh.w);
+        var c = document.createElement('canvas');
+        c.width = pw; c.height = ph;
+        var g = c.getContext('2d');
+        g.scale(pw / sh.w, pw / sh.w);
+        g.fillStyle = COLORS[S.color];
+        g.fill(paths[si], 'evenodd');
+        var c2 = document.createElement('canvas');
+        c2.width = pw; c2.height = ph;
+        var g2 = c2.getContext('2d');
+        g2.scale(pw / sh.w, pw / sh.w);
+        g2.fillStyle = YELLOW;
+        g2.fill(centres[si]);
+        return { img: c, fill: c2, w: w, h: w * sh.h / sh.w };
+      });
+    });
+  }
+
+  function seed() {
+    var n = Math.max(6, Math.min(260, Math.round(W * H / 16500 * S.density)));
+    var cols = Math.max(1, Math.round(Math.sqrt(n * W / H)));
+    var rows = Math.max(1, Math.ceil(n / cols));
+    var cells = [];
+    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) cells.push([c, r]);
+    for (var i = cells.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = cells[i]; cells[i] = cells[j]; cells[j] = t; }
+    marks = cells.slice(0, n).map(function (cell) {
+      var u = (cell[0] + 0.5 + rand(-0.3, 0.3)) / cols, v = (cell[1] + 0.5 + rand(-0.3, 0.3)) / rows;
+      for (var k = 0; k < 30 && inInfield(u * W, HY(v)); k++) { u = Math.random(); v = Math.random(); }   // daisies grow in the outfield
+      return make(u, v, pickSize());
+    });
+    dotsArr = [];
+    for (var d = 0; d < Math.round(n * 3.5); d++) dotsArr.push(make(Math.random(), Math.random(), -1));
+    document.getElementById('density-out').textContent = n;
+  }
+  function make(u, v, sz) {
+    var rot = rand(0, Math.PI * 2);
+    return { u: u, v: v, x: u * W, y: HY(v), vx: 0, vy: 0, rot: rot, base: rot, rv: 0, sz: sz, sh: pickShape(),
+             p1: rand(0, 6.28), p2: rand(0, 6.28), p3: rand(0, 6.28), f: rand(0.7, 1.3),
+             dir: Math.random() < 0.5 ? -1 : 1, delay: rand(0, 900), a: 1,
+             glow: 0, born: 0, held: false, leave: 0, lvx: 0, lvy: 0 };
+  }
+
+  // ---- the diamond: the infield sits in the bottom-right corner with home plate in the corner itself,
+  //      so the foul lines run along the bottom and right edges and the rest of the window is outfield
+  var inf = { x: 0, y: 0, r: 0 };                                 // the infield arc, in px: daisies stay outside it
+  function drawDiamond() {
+    diamond.width = Math.round(W * dpr); diamond.height = Math.round(H * dpr);
+    var g = diamond.getContext('2d');
+    var B = 65, R2 = Math.SQRT1_2, diag = B * Math.SQRT2;          // feet: 65 ft bases
+    var s = Math.min(W, H) * (W < 600 ? 0.44 : 0.36) / B;            // px per foot
+    var hx = W - 28, hy = H - 28;                                   // home plate
+    inf.x = hx; inf.y = hy; inf.r = 104 * s;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.beginPath(); g.rect(0, 64, W, H - 64); g.clip();              // keep the lines out of the header
+    g.translate(hx, hy); g.scale(s, -s); g.rotate(Math.PI / 4);     // feet, y up, first base straight up the right edge
+    g.strokeStyle = COLORS.navy; g.globalAlpha = 0.14; g.lineWidth = 1 / s; g.lineJoin = 'miter';
+    g.beginPath();
+    g.moveTo(0, 0); g.lineTo(900 * R2, 900 * R2);                   // first-base foul line
+    g.moveTo(0, 0); g.lineTo(-900 * R2, 900 * R2);                  // third-base foul line
+    g.moveTo(B * R2, B * R2); g.lineTo(0, diag); g.lineTo(-B * R2, B * R2);   // first to second to third
+    g.stroke();
+    // infield arc: a true quarter circle centred on home plate, just outside second base, so it meets both foul lines square
+    g.beginPath(); g.arc(0, 0, 104, Math.PI / 4, Math.PI * 3 / 4); g.stroke();
+    // pitcher's circle
+    g.beginPath(); g.arc(0, 50, 8, 0, 6.2832); g.stroke();
+  }
+  function inInfield(x, y) { return S.lines && Math.hypot(x - inf.x, y - inf.y) < inf.r + 24; }
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    buildSprites(); drawDiamond(); seed(); placeBigName();
+  }
+
+  // ---- the name: centred and large during the intro
+  function placeBigName() {
+    var prev = wm.style.transition; wm.style.transition = 'none';
+    var had = body.classList.contains('intro'); body.classList.remove('intro');
+    var hadSettling = body.classList.contains('settling'); body.classList.remove('settling');
+    var r = wm.getBoundingClientRect();
+    bq.x = r.left + 42; bq.y = r.bottom + 52;                    // the bouquet's heads sit here, under the name
+    pickedEl.style.top = Math.round(bq.y + 76) + 'px';
+    var s = Math.min(96 / 16, (W * 0.86) / r.width);
+    body.style.setProperty('--wm-s', s.toFixed(3));
+    body.style.setProperty('--wm-k', (1 / s).toFixed(5));
+    body.style.setProperty('--wm-x', (W / 2 - r.width * s / 2 - r.left).toFixed(1) + 'px');
+    body.style.setProperty('--wm-y', (H / 2 - r.height * s / 2 - r.top).toFixed(1) + 'px');
+    if (had) body.classList.add('intro');
+    if (hadSettling) body.classList.add('settling');
+    void wm.offsetWidth; wm.style.transition = prev;
+  }
+  var introTimer = 0;
+  function playIntro() {
+    clearTimeout(introTimer); clearTimeout(settleTimer);
+    closeSheet();
+    if (reduce) { body.classList.remove('intro', 'settling', 'no-anim'); fieldStart = -1e6; return; }
+    body.classList.add('no-anim', 'intro'); body.classList.remove('settling');
+    fieldStart = Infinity;
+    marks.concat(dotsArr).forEach(function (p) { p.x = p.u * W; p.y = HY(p.v); p.vx = p.vy = p.rv = 0; });
+    void wm.offsetWidth; body.classList.remove('no-anim');
+    introTimer = setTimeout(function () {
+      body.classList.add('settling'); body.classList.remove('intro'); fieldStart = performance.now() + 150;
+      settleTimer = setTimeout(settled, 1100);                     // fallback in case transitionend never fires
+    }, 1000);
+  }
+  // the name has reached the corner: swap the scaled-down large type for real 16px type, without animating
+  var settleTimer = 0;
+  function settled() {
+    clearTimeout(settleTimer);
+    if (!body.classList.contains('settling')) return;
+    body.classList.add('no-anim'); body.classList.remove('settling');
+    void wm.offsetWidth; body.classList.remove('no-anim');
+  }
+  wm.addEventListener('transitionend', function (e) { if (e.target === wm && e.propertyName === 'transform') settled(); });
+
+  // ---- pointer
+  function onMove(e) {
+    var now = performance.now(), dt = Math.max(8, now - cursor.t) / 1000;
+    if (cursor.active) {
+      cursor.vx = cursor.vx * 0.6 + ((e.clientX - cursor.x) / dt) * 0.4;
+      cursor.vy = cursor.vy * 0.6 + ((e.clientY - cursor.y) / dt) * 0.4;
+    }
+    cursor.x = e.clientX; cursor.y = e.clientY; cursor.t = now; cursor.active = true;
+  }
+  window.addEventListener('pointermove', onMove, { passive: true });
+  window.addEventListener('pointerdown', onMove, { passive: true });
+  function leave(e) { if (!e || e.pointerType !== 'mouse') { cursor.active = false; cursor.vx = cursor.vy = 0; } }
+  window.addEventListener('pointerup', leave, { passive: true });
+  window.addEventListener('pointercancel', leave, { passive: true });
+  document.documentElement.addEventListener('mouseleave', function () { cursor.active = false; });
+
+  // ---- picking: click a daisy and it comes with the cursor; a new one grows where it was
+  function showPicked() { pickedEl.textContent = 'Picked ' + picked; pickedEl.hidden = picked === 0 || !!openId; }
+  function pickable(x, y, now) {
+    var best = null, bd = 1e9;
+    for (var i = 0; i < marks.length; i++) {
+      var p = marks[i];
+      if (p.held || p.leave || now < p.born || visible(p, now) < 0.5) continue;
+      var d = Math.hypot(p.x - x, p.y - y), hit = Math.max(24, sprites[p.sh][p.sz].w * 0.5);
+      if (d < hit && d < bd) { bd = d; best = p; }
+    }
+    return best;
+  }
+  function letGo(p, now, vy) { p.held = false; p.leave = now; p.lvx = rand(-20, 20); p.lvy = vy; }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (!S.pick) return;
+    var now = performance.now(), p = pickable(e.clientX, e.clientY, now);
+    if (!p) return;
+    var again = make(p.u, p.v, pickSize()); again.born = now + 2500; again.delay = 0; marks.push(again);
+    picked++; showPicked();
+    pickedEl.classList.remove('flash'); void pickedEl.offsetWidth; pickedEl.classList.add('flash');
+    p.held = true; p.bs = 1; held.push(p);
+    if (held.length > bq.max) letGo(held.shift(), now, -30);    // the bouquet stays small: the oldest goes
+  });
+  function slot(i) { var ang = i * 2.39996, r = 10 * Math.sqrt(i + 0.5); return [bq.x + Math.cos(ang) * r, bq.y + Math.sin(ang) * r * 0.85]; }
+  function stepHeld(p, i, dt) {
+    var s = slot(i);
+    if (reduce) { p.x = s[0]; p.y = s[1]; p.bs = bq.scale; return; }
+    p.vx += ((s[0] - p.x) * 46 - p.vx * 12) * dt; p.vy += ((s[1] - p.y) * 46 - p.vy * 12) * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.bs += (bq.scale - p.bs) * Math.min(1, dt * 5);
+    p.rv += (p.vx * 0.004 - p.rv * 3) * dt; p.rot += p.rv * dt;
+  }
+  function drawStems(a) {                                       // thin stems gathered below the heads
+    var gx = bq.x, gy = bq.y + 50;
+    ctx.strokeStyle = COLORS[S.color]; ctx.lineWidth = 1;
+    for (var i = 0; i < held.length; i++) {
+      var p = held[i], s = slot(i), near = 1 - Math.min(1, Math.hypot(p.x - s[0], p.y - s[1]) / 60);
+      if (near <= 0.02) continue;
+      ctx.globalAlpha = a * near;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo((p.x + gx) / 2, gy - 14, gx, gy);
+      ctx.lineTo(gx + (p.x - bq.x) * 0.22, gy + 16); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawMark(p, a, sc) {
+    var sp = sprites[p.sh][p.sz];
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.scale(sc, sc);
+    if (p.glow > 0.01) { ctx.globalAlpha = a * p.glow; ctx.drawImage(sp.fill, -sp.w / 2, -sp.h / 2, sp.w, sp.h); }
+    ctx.globalAlpha = a; ctx.drawImage(sp.img, -sp.w / 2, -sp.h / 2, sp.w, sp.h);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // ---- simulation
+  function step(p, dt, t, M, heavy) {
+    var hx = p.u * W, hy = HY(p.v), sway = 0;
+    if (S.drift && !reduce) {
+      hx += Math.sin(t * 0.25 * p.f + p.p1) * 10; hy += Math.cos(t * 0.21 * p.f + p.p2) * 10;
+      sway = Math.sin(t * 0.3 * p.f + p.p3) * 0.12;
+    }
+    var ax = (hx - p.x) * M.k - p.vx * M.c, ay = (hy - p.y) * M.k - p.vy * M.c;
+    if (cursor.active && !reduce) {
+      var dx = p.x - cursor.x, dy = p.y - cursor.y, d = Math.sqrt(dx * dx + dy * dy) || 0.001;
+      if (d < S.reach) {
+        var f = 1 - d / S.reach, nx = dx / d, ny = dy / d, g = heavy ? 1 : 1.35;
+        if (S.mode === 'part') { ax += nx * f * f * M.push * g; ay += ny * f * f * M.push * g; }
+        else if (S.mode === 'spin') {
+          var sp = Math.sqrt(cursor.vx * cursor.vx + cursor.vy * cursor.vy);
+          var cross = cursor.vx * dy - cursor.vy * dx;
+          var s = sp > 30 ? (cross > 0 ? 1 : -1) : p.dir;
+          p.rv += s * f * (sp * 0.012 + 1.2) * 6 * dt;
+          ax += nx * f * M.push * g; ay += ny * f * M.push * g;
+        } else {
+          ax += (cursor.vx * 6 + nx * M.push) * f * g; ay += (cursor.vy * 6 + ny * M.push) * f * g;
+          p.rv += p.dir * f * 4 * dt;
+        }
+      }
+    }
+    p.vx += ax * dt; p.vy += ay * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    p.base += Math.round((p.rot - p.base) / 6.2832) * 6.2832;
+    p.rv += ((p.base + sway - p.rot) * M.rk - p.rv * M.rc) * dt;
+    p.rot += p.rv * dt;
+  }
+  function visible(p, now) {
+    var a = reduce ? 1 : Math.max(0, Math.min(1, (now - fieldStart - p.delay) / 700));
+    if (p.born) a = Math.min(a, Math.max(0, Math.min(1, (now - p.born) / 700)));
+    if (bq.on > 0.01 && !p.held) {
+      var zk = Math.max(0, Math.min(1, Math.min((bq.x + 120 - p.u * W) / 40, (bq.y + 150 - HY(p.v)) / 40)));
+      a *= 1 - bq.on * zk;
+    }
+    if (clearing > 0.001 && clearAll) a *= 1 - clearing;
+    else if (clearing > 0.001) {
+      var rx = Math.min(W * 0.5, 400), ry = Math.min(H * 0.44, 330);
+      var ex = (p.u * W - W / 2) / rx, ey = (HY(p.v) - H / 2) / ry, e = Math.sqrt(ex * ex + ey * ey);
+      var k = Math.max(0, Math.min(1, (e - 0.9) / 0.35)); k = k * k * (3 - 2 * k);
+      a *= 1 - clearing * (1 - k);
+    }
+    return a;
+  }
+
+  var last = performance.now();
+  function frame(now) {
+    var dt = Math.min(0.033, (now - last) / 1000); last = now;
+    var t = now / 1000, M = MODES[S.mode];
+    if (now - cursor.t > 60) { cursor.vx *= Math.exp(-dt * 8); cursor.vy *= Math.exp(-dt * 8); }
+    clearing += (clearingTarget - clearing) * (reduce ? 1 : Math.min(1, dt * 6));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var i, p, a;
+    if (S.dots) {
+      ctx.fillStyle = COLORS[S.color];
+      for (i = 0; i < dotsArr.length; i++) {
+        p = dotsArr[i]; step(p, dt, t, M, false); a = visible(p, now);
+        if (a <= 0.01) continue;
+        ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(p.x, p.y, 1.1, 0, 6.2832); ctx.fill();
+      }
+    }
+    var gone = false;
+    for (i = 0; i < marks.length; i++) {
+      p = marks[i];
+      if (p.held) continue;
+      if (p.leave) {                                            // let go: drifts up and fades
+        var la = 1 - (now - p.leave) / 600;
+        if (la <= 0) { p.dead = true; gone = true; continue; }
+        p.x += p.lvx * dt; p.y += p.lvy * dt; p.rot += p.rv * dt;
+        drawMark(p, la, 1 + (1 - la) * 0.15);
+        continue;
+      }
+      step(p, dt, t, M, true); a = visible(p, now);
+      var tg = 0;
+      if (S.glow && cursor.active && !reduce) {
+        var gd = Math.hypot(p.x - cursor.x, p.y - cursor.y);
+        if (gd < S.reach) tg = Math.min(1, (1 - gd / S.reach) * 1.6);
+      }
+      p.glow += tg > p.glow ? (tg - p.glow) * Math.min(1, dt * 14) : -p.glow * Math.min(1, dt * 1.1);
+      if (a <= 0.01) continue;
+      drawMark(p, a, 0.85 + 0.15 * a);
+    }
+    if (gone) marks = marks.filter(function (m) { return !m.dead; });
+    var ha = 1 - clearing;                                      // the bouquet hides while a sheet is open
+    bq.on += ((held.length ? 1 : 0) - bq.on) * Math.min(1, dt * 4);
+    for (i = 0; i < held.length; i++) stepHeld(held[i], i, dt);
+    if (ha > 0.01) drawStems(ha);
+    for (i = 0; i < held.length; i++) {                         // the bouquet's heads, on top
+      p = held[i];
+      p.glow += ((S.glow ? 1 : 0) - p.glow) * Math.min(1, dt * 8);
+      if (ha > 0.01) drawMark(p, ha, p.bs);
+    }
+    var over = S.pick && cursor.active && !openId && pickable(cursor.x, cursor.y, now);
+    canvas.style.cursor = over ? 'pointer' : '';
+    var showD = S.lines && now > fieldStart && !openId;
+    if (showD !== diamondOn) { diamondOn = showD; diamond.style.opacity = showD ? '1' : '0'; }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  // ---- sheets
+  var openId = null;
+  function closeSheet() {
+    if (!openId) return;
+    document.getElementById('sheet-' + openId).hidden = true;
+    document.getElementById('nav-' + openId).setAttribute('aria-expanded', 'false');
+    openId = null; clearingTarget = 0; showPicked();
+    document.getElementById('panel').hidden = !CONTROLS;
+  }
+  function openSheet(id) {
+    if (openId === id) { closeSheet(); return; }
+    closeSheet();
+    openId = id; clearAll = (id === 'seasons'); clearingTarget = 1;
+    document.getElementById('sheet-' + id).hidden = false;
+    document.getElementById('nav-' + id).setAttribute('aria-expanded', 'true');
+    showPicked();
+    document.getElementById('panel').hidden = !CONTROLS || (id === 'seasons');   // the field controls would sit on top of the list
+  }
+  document.querySelectorAll('.nav button').forEach(function (b) {
+    b.addEventListener('click', function () { openSheet(b.dataset.sheet); });
+  });
+  wm.addEventListener('click', closeSheet);
+  window.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+
+  // ---- seasons: data, list and detail
+  var SEASONS = [
+    { name: 'Fall 2026', team: 'The Daisy Pickers', w: 0, l: 4, t: 0, finish: '6th of 6', live: true,
+      played: 'Fridays, Gansevoort Peninsula, West Village', began: 'September 11, 2026', league: 'Volo',
+      roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Grace', 'Alexander', 'Raag', 'Kyle', 'Ryan', 'Zane', 'Ethan', 'Mary', 'Ciara', 'Kieran', 'Ellie', 'Eric', 'Peter'] },
+    { name: 'Spring 2026', tbc: true },
+    { name: 'Fall 2025', tbc: true },
+    { name: 'Spring 2025', team: 'Daisy Pickers', w: 3, l: 4, t: 0, finish: '12th',
+      played: 'Saturdays, Central Park', began: 'April 12, 2025', league: 'Volo',
+      roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Alexander', 'Willa', 'Samya', 'Dylan', 'Kareem', 'Max', 'Phil', 'Mary', 'Ciara', 'Ryan', 'Raag', 'Zane', 'Patrick', 'Kieran', 'Elizabeth', 'Anton'] },
+    { name: 'Spring 2024', team: 'Daisy Pickers', w: 1, l: 5, t: 0, finish: '6th of 6',
+      played: 'Sundays, East River Park, Lower East Side', began: 'April 7, 2024', league: 'Volo',
+      roster: [['Elizabeth', 'Captain'], 'Alexander', 'Willa', 'Samya', 'Zackary', 'Ethan', 'Josh', 'Zach', 'Evan', 'Mary Grace', 'Patrick', 'Mimi', 'Courtney', 'Keenan', 'Kieran', 'Santos', 'Joe', 'Alex', 'Max'] },
+    { name: 'Fall 2023', team: 'The Daisy-Pickers', w: 2, l: 5, t: 0, finish: '4th of 6',
+      played: 'Saturdays, McCarren Park, Williamsburg', began: 'September 23, 2023', league: 'Volo',
+      roster: [['Mimi', 'Co-captain'], ['Zackary', 'Co-captain'], 'Alexander', 'Willa', 'Anna', 'Ethan', 'Meghan', 'Bronte', 'Phil', 'Sarah', 'Patrick', 'Christopher', 'Kieran', 'Elizabeth', 'Alex'] },
+    { name: 'Summer 2023', team: 'The Blueprinters', as: 'The Blueprinters', w: 0, l: 6, t: 0, finish: '10th',
+      played: 'Saturdays, Central Park', began: 'June 24, 2023', league: 'Volo',
+      roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Alexander', 'Audrey', 'Hongye', 'Emily', 'Bronte', 'Shaan', 'Qiao', 'Tiam', 'Kieran', 'Daniel', 'Jerry'] }
+  ];
+  function record(s) { return s.w + '–' + s.l + (s.t ? '–' + s.t : ''); }
+  function fun(s) { return (s.w + s.l + s.t) + '–0'; }   // every game played is a win for fun
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  var seasonList = document.getElementById('season-list'), seasonBtns = [], currentSeason = -1;
+  function selectSeason(i, focus) {
+    currentSeason = i;
+    var s = SEASONS[i];
+    seasonBtns.forEach(function (b, k) { if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+    document.getElementById('s-name').textContent = s.name;
+    var facts = document.getElementById('s-facts'); facts.textContent = '';
+    document.getElementById('s-tbc').hidden = !s.tbc; facts.hidden = !!s.tbc; document.getElementById('s-roster').hidden = !!s.tbc;
+    if (s.tbc) { if (focus) seasonBtns[i].focus(); return; }
+    var rows = [['Win record', record(s) + (s.live ? ' so far' : '')], ['Fun record', fun(s) + (s.live ? ' so far' : '')], ['Finish', s.finish + (s.live ? ' so far' : '')], ['Played', s.played], ['Began', s.began], ['League', s.league]];
+    if (s.as) rows.push(['Team name', s.as]);
+    rows.forEach(function (r) { facts.appendChild(el('dt', '', r[0])); facts.appendChild(el('dd', '', r[1])); });
+    var names = document.getElementById('s-names'); names.textContent = '';
+    s.roster.forEach(function (r) {
+      var li = el('li', '', Array.isArray(r) ? r[0] : r);
+      if (Array.isArray(r)) li.appendChild(el('span', 'cap', r[1]));
+      names.appendChild(li);
+    });
+    document.getElementById('s-count').textContent = String(s.roster.length);
+    if (focus) seasonBtns[i].focus();
+  }
+  SEASONS.forEach(function (s, i) {
+    var li = el('li'), b = el('button', 'item');
+    b.appendChild(el('span', 'nm', s.name));
+    b.addEventListener('click', function () { selectSeason(i); });
+    b.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectSeason((i + (e.key === 'ArrowDown' ? 1 : SEASONS.length - 1)) % SEASONS.length, true);
+      }
+    });
+    li.appendChild(b); seasonList.appendChild(li); seasonBtns.push(b);
+  });
+  selectSeason(0);
+
+  // ---- controls
+  function pressGroup(sel, attr, val) {
+    document.querySelectorAll(sel).forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset[attr] === val)); });
+  }
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () { S.mode = b.dataset.mode; pressGroup('[data-mode]', 'mode', S.mode); });
+  });
+  document.querySelectorAll('[data-shape]').forEach(function (b) {
+    b.addEventListener('click', function () { S.shapes = b.dataset.shape; pressGroup('[data-shape]', 'shape', S.shapes); marks.forEach(function (p) { p.sh = pickShape(); }); });
+  });
+  document.querySelectorAll('[data-col]').forEach(function (b) {
+    b.addEventListener('click', function () { S.color = b.dataset.col; pressGroup('[data-col]', 'col', S.color); buildSprites(); });
+  });
+  var elDensity = document.getElementById('density'), elSize = document.getElementById('size'), elReach = document.getElementById('reach');
+  function outs() {
+    document.getElementById('size-out').textContent = Math.round(S.size * 100) + '%';
+    document.getElementById('reach-out').textContent = S.reach + 'px';
+  }
+  elDensity.addEventListener('input', function () { S.density = +elDensity.value; seed(); marks.concat(dotsArr).forEach(function (p) { p.delay = 0; }); });
+  elSize.addEventListener('input', function () { S.size = +elSize.value; buildSprites(); outs(); });
+  elReach.addEventListener('input', function () { S.reach = +elReach.value; outs(); });
+  document.getElementById('drift').addEventListener('change', function (e) { S.drift = e.target.checked; });
+  document.getElementById('dots').addEventListener('change', function (e) { S.dots = e.target.checked; });
+  document.getElementById('glow').addEventListener('change', function (e) { S.glow = e.target.checked; });
+  document.getElementById('lines').addEventListener('change', function (e) { S.lines = e.target.checked; seed(); marks.forEach(function (p) { p.delay = 0; }); });
+  document.getElementById('pick').addEventListener('change', function (e) { S.pick = e.target.checked; });
+  document.getElementById('replay').addEventListener('click', playIntro);
+
+  var panel = document.getElementById('panel'), toggle = document.getElementById('panel-toggle'), panelBody = document.getElementById('panel-body');
+  function setPanel(open) {
+    panelBody.hidden = !open; panel.classList.toggle('closed', !open);
+    toggle.setAttribute('aria-expanded', String(open));
+    document.getElementById('panel-hint').textContent = open ? 'Hide' : 'Show';
+  }
+  toggle.addEventListener('click', function () { setPanel(panelBody.hidden); });
+
+  // ---- start
+  var rt = 0;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { resize(); marks.concat(dotsArr).forEach(function (p) { p.delay = 0; }); }, 120); });
+  function start() {
+    resize(); outs(); setPanel(window.innerWidth >= 720); panel.hidden = !CONTROLS;
+    playIntro();
+    requestAnimationFrame(function (n) { last = n; frame(n); });
+  }
+  body.classList.add('no-anim', 'intro');
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 1500); })]).then(start);
+})();
+</script>
