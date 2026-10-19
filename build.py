@@ -7,7 +7,8 @@
 
 Everything is inlined into one HTML file: the fonts (as base64), the traced
 daisy shapes, the season data, the styles and the script. No dependencies
-beyond the Python standard library.
+beyond the Python standard library. Photos are the exception: they stay as
+files in assets/photos/ (run photos.py first) and only their list is inlined.
 """
 import base64
 import json
@@ -53,7 +54,9 @@ def render(controls):
     out = template.replace("/*FONTS*/", font_css())
     out = out.replace("/*SHAPES*/", json.dumps(shapes))
     out = out.replace("/*CONTROLS*/", controls)
-    for marker in ("/*FONTS*/", "/*SHAPES*/", "/*CONTROLS*/"):
+    photos = ROOT / "assets" / "photos" / "index.json"
+    out = out.replace("/*PHOTOS*/", photos.read_text().strip() if photos.exists() else "{}")
+    for marker in ("/*FONTS*/", "/*SHAPES*/", "/*CONTROLS*/", "/*PHOTOS*/"):
         assert marker not in out, f"{marker} was not filled in"
     return out
 

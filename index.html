@@ -100,6 +100,11 @@ body.intro .nav, body.intro .panel { opacity: 0; pointer-events: none; }
 .names { list-style: none; margin: 0; padding: 0; columns: 3 150px; column-gap: var(--space-3); font: 400 20px/34px var(--font-sans); }
 .names li { break-inside: avoid; }
 .names .cap { display: inline; margin-left: 8px; }
+/* photos: the season's own, cropped to one shape in the grid; click opens the whole photo */
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-1); margin-top: var(--space-2); }
+.photos a { display: block; background: var(--chalk); }
+.photos a:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.photos img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
 @media (max-width: 720px) {
   .sheet.seasons { padding-inline: var(--space-2); }
   .seasons-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
@@ -112,6 +117,18 @@ body.intro .nav, body.intro .panel { opacity: 0; pointer-events: none; }
 @keyframes flash { 0%, 35% { background: var(--daisy); color: var(--ink); } 100% { background: transparent; } }
 .picked { position: fixed; left: var(--space-2); top: 160px; z-index: 3; padding: 2px 4px; margin-left: -4px; }
 .picked.flash { animation: flash 1.1s ease-out; }
+
+/* at the 20th pick: a nudge towards Contact, an arrow drawn in by hand, gone after a few seconds */
+.nudge { position: fixed; z-index: 3; display: flex; align-items: flex-end; gap: 2px; pointer-events: none;
+  opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
+.nudge.on { opacity: 1; visibility: visible; transition: opacity .6s ease, visibility 0s; }
+.nudge p { margin: 0 0 -6px; background: var(--daisy); color: var(--ink); padding: 3px 6px; font: 500 15px/20px var(--font-sans); white-space: nowrap; }
+.nudge svg { display: block; flex: none; }
+.nudge path { fill: none; stroke: var(--navy); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.nudge.on .shaft { animation: draw .7s ease-out .25s backwards; }
+.nudge.on .head { animation: draw .25s ease-out .9s backwards; }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .nudge, .nudge.on { transition: none; } .nudge.on .shaft, .nudge.on .head { animation: none; } }
 
 /* prototype controls: tooling, not part of the site */
 .panel {
@@ -145,6 +162,13 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
 <button class="wm" id="home" aria-label="Daisy Pickers, home"><span>Daisy Pickers</span></button>
 
 <p class="cap picked" id="picked" aria-live="polite" hidden></p>
+<div class="nudge" id="nudge" aria-live="polite">
+  <p>You can be a Daisy Picker!</p>
+  <svg width="80" height="70" viewBox="0 0 80 70" aria-hidden="true">
+    <path class="shaft" pathLength="1" d="M5 63 C15 61 31 58 42 48 C51 40 55 31 58 22 C60 16 61.5 11 62 6"/>
+    <path class="head" pathLength="1" d="M53.5 13.5 C56.5 10.5 59.5 7.5 62.2 5.2 C64 8.5 65.5 11.8 67.6 14.6"/>
+  </svg>
+</div>
 
 <nav class="nav" aria-label="Site">
   <button id="nav-seasons" data-sheet="seasons" aria-expanded="false" aria-controls="sheet-seasons">Seasons</button>
@@ -163,6 +187,10 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
       <div id="s-roster">
         <div class="roster-head"><span>Roster</span><span class="cap" id="s-count"></span></div>
         <ol class="names" id="s-names"></ol>
+      </div>
+      <div id="s-photos" hidden>
+        <div class="roster-head"><span>Photos</span><span class="cap" id="s-pcount"></span></div>
+        <div class="photos" id="s-photo-grid"></div>
       </div>
     </article>
   </div>
@@ -411,6 +439,16 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
     }
     return best;
   }
+  var nudge = document.getElementById('nudge'), nudgeT = 0, NUDGE_AT = 20;
+  function showNudge() {
+    if (openId) return;
+    var c = document.getElementById('nav-contact').getBoundingClientRect();
+    nudge.style.right = Math.round(window.innerWidth - (c.left + c.width / 2) - 18) + 'px';   // the arrow's tip, 18px in from its right edge, under Contact
+    nudge.style.top = Math.round(c.bottom + 6) + 'px';
+    nudge.classList.add('on');
+    clearTimeout(nudgeT); nudgeT = setTimeout(hideNudge, 4500);
+  }
+  function hideNudge() { clearTimeout(nudgeT); nudge.classList.remove('on'); }
   function letGo(p, now, vy) { p.held = false; p.leave = now; p.lvx = rand(-20, 20); p.lvy = vy; }
   canvas.addEventListener('pointerdown', function (e) {
     if (!S.pick) return;
@@ -418,6 +456,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
     if (!p) return;
     var again = make(p.u, p.v, pickSize()); again.born = now + 2500; again.delay = 0; marks.push(again);
     picked++; showPicked();
+    if (picked === NUDGE_AT) showNudge();
     pickedEl.classList.remove('flash'); void pickedEl.offsetWidth; pickedEl.classList.add('flash');
     p.held = true; p.bs = 1; held.push(p);
     if (held.length > bq.max) letGo(held.shift(), now, -30);    // the bouquet stays small: the oldest goes
@@ -566,7 +605,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
   }
   function openSheet(id) {
     if (openId === id) { closeSheet(); return; }
-    closeSheet();
+    closeSheet(); hideNudge();
     openId = id; clearAll = (id === 'seasons'); clearingTarget = 1;
     document.getElementById('sheet-' + id).hidden = false;
     document.getElementById('nav-' + id).setAttribute('aria-expanded', 'true');
@@ -580,8 +619,9 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
   window.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
 
   // ---- seasons: data, list and detail
+  var PHOTOS = {"fall-2025": [[1, 360, 480]], "fall-2026": [[1, 640, 480], [2, 480, 640]], "spring-2024": [[1, 640, 424], [2, 640, 424]], "spring-2026": [[1, 480, 640], [2, 480, 640], [3, 480, 640], [4, 480, 640], [5, 480, 640], [6, 480, 640]], "summer-2023": [[1, 360, 480]]};   // season slug -> [n, width, height], from assets/photos/index.json
   var SEASONS = [
-    { name: 'Fall 2026', team: 'The Daisy Pickers', w: 0, l: 4, t: 0, finish: '6th of 6', live: true,
+    { name: 'Fall 2026', team: 'The Daisy Pickers', w: 2, l: 4, t: 0,
       played: 'Fridays, Gansevoort Peninsula, West Village', began: 'September 11, 2026', league: 'Volo',
       roster: [['Zackary', 'Co-captain'], ['Mimi', 'Co-captain'], 'Grace', 'Alexander', 'Raag', 'Kyle', 'Ryan', 'Zane', 'Ethan', 'Mary', 'Ciara', 'Kieran', 'Ellie', 'Eric', 'Peter'] },
     { name: 'Spring 2026', team: 'Daisy Pickers', funRecord: '6–0',
@@ -613,7 +653,7 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
     seasonBtns.forEach(function (b, k) { if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
     document.getElementById('s-name').textContent = s.name;
     var facts = document.getElementById('s-facts'); facts.textContent = '';
-    document.getElementById('s-tbc').hidden = !s.tbc; facts.hidden = !!s.tbc; document.getElementById('s-roster').hidden = !!s.tbc;
+    document.getElementById('s-tbc').hidden = !s.tbc; facts.hidden = !!s.tbc; document.getElementById('s-roster').hidden = !!s.tbc; document.getElementById('s-photos').hidden = true;
     if (s.tbc) { if (focus) seasonBtns[i].focus(); return; }
     var so = s.live ? ' so far' : '', known = s.w != null;              // seasons without a known record leave out win record and finish
     var rows = [['Win record', known && record(s) + so], ['Fun record', (s.funRecord || fun(s)) + so], ['Finish', s.finish && s.finish + so], ['Played', s.played], ['Began', s.began], ['League', s.league]];
@@ -626,6 +666,15 @@ input[type="range"] { width: 100%; margin: 0; accent-color: var(--ink); }
       names.appendChild(li);
     });
     document.getElementById('s-count').textContent = String(s.roster.length);
+    var slug = s.name.toLowerCase().replace(/ /g, '-'), shots = PHOTOS[slug] || [], grid = document.getElementById('s-photo-grid');
+    grid.textContent = ''; document.getElementById('s-photos').hidden = !shots.length;
+    document.getElementById('s-pcount').textContent = String(shots.length);
+    shots.forEach(function (p) {
+      var dir = 'assets/photos/' + slug + '/', a = el('a'), img = el('img');
+      a.href = dir + p[0] + '.jpg'; a.target = '_blank'; a.rel = 'noopener';
+      img.src = dir + p[0] + '-s.jpg'; img.width = p[1]; img.height = p[2]; img.loading = 'lazy'; img.alt = s.name + ', photo ' + p[0];
+      a.appendChild(img); grid.appendChild(a);
+    });
     if (focus) seasonBtns[i].focus();
   }
   SEASONS.forEach(function (s, i) {

@@ -7,12 +7,14 @@ Website for the Daisy Pickers softball team, live at https://daisypickers.com. O
 - `src/template.html`: all markup, styles, script and the `SEASONS` data. Edit this.
 - `build.py`: inlines fonts and shapes into `index.html` (Python standard library only). Never edit `index.html` by hand.
 - `src/shapes.json`, `src/fonts/`, `assets/logos/`: traced daisies, fonts (SIL OFL), logo SVGs.
+- `photos/<season>/` (not committed): full-size originals, e.g. `photos/fall-2026/`. `photos.py` resizes them and strips metadata into `assets/photos/`, which is committed.
 - `design-system/`: brand book and tokens. Partly out of date (see below).
 - `reference/shirt.jpg`: the shirt photo the daisies and lettering were traced from.
 
 ## Build and publish
 
 ```
+python3 photos.py     # only after adding photos; needs macOS (sips)
 python3 build.py      # writes index.html; open it to preview, add #controls for the tuning panel
 git commit -am "..." && git push   # GitHub Pages redeploys in about a minute
 ```
@@ -25,18 +27,20 @@ git commit -am "..." && git push   # GitHub Pages redeploys in about a minute
 ## Decisions
 
 - **Look:** white, black type, navy daisies, one yellow accent, lots of space. "Stylish, not cute."
-- **Home:** the name opens large and centred, then settles top-left. Click a daisy to pick it into a bouquet with a "Picked N" count. A faint infield (foul lines, base paths, arc, pitcher's circle) sits bottom-right.
+- **Home:** the name opens large and centred, then settles top-left. Click a daisy to pick it into a bouquet with a "Picked N" count. At the 20th pick, "You can be a Daisy Picker!" and a hand-drawn arrow to Contact fade in for a few seconds. A faint infield (foul lines, base paths, arc, pitcher's circle) sits bottom-right.
 - **Seasons:** list and detail, arrow keys move through them. The fun record is games played to nil. Seasons with an unknown record omit it.
+- **Photos:** a grid under each season's roster, cropped to 4:5; a click opens the whole photo. Seasons without photos show no section.
 - **Players:** first names only. Mimi and Zackary shown as co-captains wherever either captained.
 - **Rejected:** grass texture, tagline, dots between daisies, photo behind the seasons list.
 
 ## To do
 
-- Fall 2026: update the record (0–4 so far) when the season ends.
+- Fall 2026: final finish unknown (was 6th of 6 at 0–4), so it is left out.
+- Photos: two in `photos/` are unplaced (yellow Volo shirts: a rainy group shot and one on Sheep Meadow). Spring 2024 (Yankee Stadium) and the second Fall 2026 photo are placed by file date only.
 - Records for Fall 2025 and Spring 2026 (PS Social) are unknown; fun record set to 6–0.
 - Spring 2025 "Phil" is a guess from a cut-off name. Rosters for Summer 2023 to Spring 2025 may be incomplete. Summer 2023 and Spring 2025 finishes lack league size.
 - Replace traced logo with original artwork when available. Shirt typeface is a near match, not confirmed.
-- Not started: season pages, photos, merch.
+- Not started: season pages, merch.
 
 ## Out of date
 
