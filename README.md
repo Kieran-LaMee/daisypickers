@@ -36,7 +36,7 @@ git commit -am "..." && git push   # GitHub Pages redeploys in about a minute
 ## To do
 
 - Fall 2026: final finish unknown (was 6th of 6 at 0–4), so it is left out.
-- Photos: two in `photos/` are unplaced (yellow Volo shirts: a rainy group shot and one on Sheep Meadow). Spring 2024 (Yankee Stadium) and the second Fall 2026 photo are placed by file date only.
+- Photos: Spring 2024 (Yankee Stadium) and the second Fall 2026 photo are placed by file date only.
 - Records for Fall 2025 and Spring 2026 (PS Social) are unknown; fun record set to 6–0.
 - Spring 2025 "Phil" is a guess from a cut-off name. Rosters for Summer 2023 to Spring 2025 may be incomplete. Summer 2023 and Spring 2025 finishes lack league size.
 - Replace traced logo with original artwork when available. Shirt typeface is a near match, not confirmed.
